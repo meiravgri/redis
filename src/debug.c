@@ -723,7 +723,7 @@ NULL
             return;
         }
         long valsize = 0;
-        if ( c->argc == 5 && getPositiveLongFromObjectOrReply(c, c->argv[4], &valsize, NULL) != C_OK ) 
+        if ( c->argc == 5 && getPositiveLongFromObjectOrReply(c, c->argv[4], &valsize, NULL) != C_OK )
             return;
 
         for (j = 0; j < keys; j++) {
@@ -1055,7 +1055,7 @@ NULL
 
 /* =========================== Crash handling  ============================== */
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 void _serverAssert(const char *estr, const char *file, int line) {
     bugReportStart();
     serverLog(LL_WARNING,"=== ASSERTION FAILED ===");
@@ -1145,7 +1145,7 @@ void _serverAssertWithInfo(const client *c, const robj *o, const char *estr, con
     _serverAssert(estr,file,line);
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 void _serverPanic(const char *file, int line, const char *msg, ...) {
     va_list ap;
     va_start(ap,msg);
@@ -1840,28 +1840,37 @@ typedef struct {
 } stacktrace_data;
 
 __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
+    int tid = syscall(SYS_gettid);
     /* allocate stacktrace_data struct */
     stacktrace_data *trace_data = zmalloc(sizeof(stacktrace_data));
+    if (!trace_data) {
+        serverLog(LL_WARNING, "%d: from collect_stacktrace_data: zmalloc failed", tid);
 
+    }
+    serverLog(LL_WARNING, "%d: from collect_stacktrace_data: start writing bt", tid);
     /* Get the stack trace first! */
     trace_data->trace_size = backtrace(trace_data->trace, BACKTRACE_MAX_SIZE);
-    
+
     /* get the thread name */
     prctl(PR_GET_NAME, trace_data->thread_name);
 
-    /* get the thread id */
     trace_data->tid = syscall(SYS_gettid);
+    /* get the thread id */
+    serverLog(LL_WARNING, "%d: from collect_stacktrace_data: done writing bt", trace_data->tid);
+
 
     /* return the trace data */
     return trace_data;
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 static void writeStacktraces(int fd, int uplevel) {
     /* get the list of all the process's threads that don't block or ignore the THREADS_SIGNAL */
     pid_t pid = getpid();
     size_t len_tids = 0;
     pid_t *tids = get_ready_to_signal_threads_tids(pid, THREADS_SIGNAL, &len_tids);
+    serverLog(LL_WARNING, "writeStacktraces(): call threads_mngr");
+
 
     /* This call returns either NULL or the stacktraces data from all tids */
     stacktrace_data **stacktraces_data = (stacktrace_data **)ThreadsManager_runOnThreads(tids, len_tids, collect_stacktrace_data);
@@ -1936,7 +1945,7 @@ static void writeStacktraces(int fd, int uplevel) {
  * Functions that are taken in consideration in "uplevel" should be declared with
  * __attribute__ ((noinline)) to make sure the compiler won't inline them.
  */
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 void logStackTrace(void *eip, int uplevel) {
     int fd = openDirectLogFiledes();
     char *msg;
@@ -1966,10 +1975,10 @@ void logStackTrace(void *eip, int uplevel) {
 
 sds genClusterDebugString(sds infostring) {
     infostring = sdscatprintf(infostring, "\r\n# Cluster info\r\n");
-    infostring = sdscatsds(infostring, genClusterInfoString()); 
+    infostring = sdscatsds(infostring, genClusterInfoString());
     infostring = sdscatprintf(infostring, "\n------ CLUSTER NODES OUTPUT ------\n");
     infostring = sdscatsds(infostring, clusterGenNodesDescription(NULL, 0, 0));
-    
+
     return infostring;
 }
 
@@ -2226,7 +2235,7 @@ void invalidFunctionWasCalled(void) {}
 
 typedef void (*invalidFunctionWasCalledType)(void);
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 static void sigsegvHandler(int sig, siginfo_t *info, void *secret) {
     UNUSED(secret);
     UNUSED(info);
@@ -2304,7 +2313,7 @@ void setupDebugSigHandlers(void) {
 }
 
 void setupSigSegvHandler(void) {
-    /* Initialize the signal handler lock. 
+    /* Initialize the signal handler lock.
     Attempting to initialize an already initialized mutex or mutexattr results in undefined behavior. */
     if (!signal_handler_lock_initialized) {
         /* Set signal handler with error checking attribute. re-lock within the same thread will error. */
@@ -2490,7 +2499,7 @@ void debugDelay(int usec) {
 /* =========================== Stacktrace Utils ============================ */
 #define TIDS_INITIAL_SIZE 50
 
-/** If it doesn't block and doesn't ignore, return 1 (the thread will handle the signal) 
+/** If it doesn't block and doesn't ignore, return 1 (the thread will handle the signal)
  * If thread tid blocks or ignores sig_num returns 0 (thread is not ready to catch the signal).
  * also returns 0 if something is wrong and prints a warning message to the log file **/
 static int is_thread_ready_to_signal(pid_t pid, pid_t tid, int sig_num) {
@@ -2529,7 +2538,7 @@ static int is_thread_ready_to_signal(pid_t pid, pid_t tid, int sig_num) {
         serverLog(LL_WARNING,
         "tid:%d: failed to find SigBlk or/and SigIgn field(s) in /proc/%d/task/%d/status file", tid, pid, tid);
     }
-    return ret;    
+    return ret;
 }
 
 /** Returns a list of all the process's (pid) threads that can receive signal sig_num.
@@ -2543,7 +2552,7 @@ static pid_t *get_ready_to_signal_threads_tids(pid_t pid, int sig_num, size_t *t
     /* Get the directory handler. */
     DIR *dir;
     if (!(dir = opendir(path_buff))) return NULL;
-    
+
     size_t tids_cap = TIDS_INITIAL_SIZE;
     pid_t *tids = zmalloc(sizeof(pid_t) * tids_cap);
 
@@ -2557,7 +2566,7 @@ static pid_t *get_ready_to_signal_threads_tids(pid_t pid, int sig_num, size_t *t
         if (entry->d_type == DT_DIR) {
             /* Skip irrelevant directories. */
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-                /* the thread's directory name is equivalent to its tid. */ 
+                /* the thread's directory name is equivalent to its tid. */
                 pid_t tid = atoi(entry->d_name);
 
                 if(!is_thread_ready_to_signal(pid, tid, sig_num)) continue;
@@ -2581,7 +2590,7 @@ static pid_t *get_ready_to_signal_threads_tids(pid_t pid, int sig_num, size_t *t
     /* Swap the last tid with the the current thread id */
     if(current_thread_index != -1) {
         pid_t last_tid = tids[tids_count - 1];
-        
+
         tids[tids_count - 1] = calling_tid;
         tids[current_thread_index] = last_tid;
     }

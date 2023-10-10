@@ -83,7 +83,7 @@ void ThreadsManager_init(void) {
     sigaction(SIGUSR2, &act, NULL);
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 void **ThreadsManager_runOnThreads(pid_t *tids, size_t tids_len, run_on_thread_cb callback) {
     /* Check if it is safe to start running. If not - return */
     if(test_and_start() == IN_PROGRESS) {
@@ -133,7 +133,7 @@ static int test_and_start(void) {
     return prev_state;
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 static void invoke_callback(int sig) {
     UNUSED(sig);
 
@@ -152,7 +152,7 @@ static void invoke_callback(int sig) {
 
         /* last thread shuts down the light */
         if (curr_done_count == g_tids_len) {
-            sem_post(&wait_for_threads_sem);
+            serverLog(LL_WARNING,"sem_post(&wait_for_threads_sem) status = %d", sem_post(&wait_for_threads_sem));
         }
     }
 
@@ -161,10 +161,12 @@ static void invoke_callback(int sig) {
 
 static void wait_threads(void) {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    serverLog(LL_WARNING,"clock_gettime(CLOCK_REALTIME, &ts) status = %d, curr time = %ld", clock_gettime(CLOCK_REALTIME, &ts), ts.tv_sec);
 
     /* calculate relative time until timeout */
     ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
+
+    serverLog(LL_WARNING,"timeout = %ld", ts.tv_sec);
 
     int status = 0;
 
@@ -173,6 +175,16 @@ static void wait_threads(void) {
     while ((status = sem_timedwait(&wait_for_threads_sem, &ts)) == -1 && errno == EINTR) {
         serverLog(LL_WARNING, "threads_mngr: waiting for threads' output was interrupted by signal. Continue waiting.");
         continue;
+    }
+
+    if (status == -1) {
+        if (errno == ETIMEDOUT) {
+            serverLog(LL_WARNING, "threads_mngr:sem_timedwait() ETIMEDOUT");
+        } else if (errno == EINVAL) {
+            serverLog(LL_WARNING, "threads_mngr: EINVAL");
+        } else if (errno == EDEADLK) {
+            serverLog(LL_WARNING, "threads_mngr: EDEADLK");
+        }
     }
 }
 
