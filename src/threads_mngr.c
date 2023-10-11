@@ -161,7 +161,8 @@ static void invoke_callback(int sig) {
 
 static void wait_threads(void) {
     struct timespec ts;
-    serverLog(LL_WARNING,"clock_gettime(CLOCK_REALTIME, &ts) status = %d, curr time = %ld", clock_gettime(CLOCK_REALTIME, &ts), ts.tv_sec);
+    serverLog(LL_WARNING,"clock_gettime(CLOCK_REALTIME, &ts) status = %d", clock_gettime(CLOCK_REALTIME, &ts));
+    serverLog(LL_WARNING,"curr time = %ld",ts.tv_sec);
 
     /* calculate relative time until timeout */
     ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
