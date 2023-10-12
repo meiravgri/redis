@@ -170,7 +170,7 @@ static void wait_threads(void) {
     serverLog(LL_WARNING,"curr time = %ld",ts.tv_sec);
 
     /* calculate relative time until timeout */
-   // ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
+    ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
 
     serverLog(LL_WARNING,"timeout = %ld", ts.tv_sec);
 
