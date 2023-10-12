@@ -43,7 +43,8 @@
 #include <sys/syscall.h>
 
 #define IN_PROGRESS 1
-static const clock_t RUN_ON_THREADS_TIMEOUT = 2;
+static const clock_t RUN_ON_THREADS_TIMEOUT = 0;
+//static const clock_t RUN_ON_THREADS_TIMEOUT = 2;
 
 /*================================= Globals ================================= */
 
@@ -83,7 +84,7 @@ void ThreadsManager_init(void) {
     sigaction(SIGUSR2, &act, NULL);
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 void **ThreadsManager_runOnThreads(pid_t *tids, size_t tids_len, run_on_thread_cb callback) {
     /* Check if it is safe to start running. If not - return */
     if(test_and_start() == IN_PROGRESS) {
@@ -103,6 +104,8 @@ void **ThreadsManager_runOnThreads(pid_t *tids, size_t tids_len, run_on_thread_c
     use pshared = 0 to indicate the semaphore is shared between the process's threads (and not between processes),
     and value = 0 as the initial semaphore value. */
     sem_init(&wait_for_threads_sem, 0, 0);
+
+    serverLog(LL_WARNING, "threads_mngr: ThreadsManager_runOnThreads() tids_len = %zu ", tids_len);
 
     /* Send signal to all the threads in tids */
     pid_t pid = getpid();
@@ -133,7 +136,7 @@ static int test_and_start(void) {
     return prev_state;
 }
 
-__attribute__ ((noinline)) 
+__attribute__ ((noinline))
 static void invoke_callback(int sig) {
     UNUSED(sig);
 
@@ -146,13 +149,15 @@ static void invoke_callback(int sig) {
     if (g_output_array) {
         size_t thread_id;
         atomicGetIncr(g_thread_ids, thread_id, 1);
+        serverLog(LL_WARNING, "thread_id: %zu", thread_id);
+
         g_output_array[thread_id] = g_callback();
         size_t curr_done_count;
         atomicIncrGet(g_num_threads_done, curr_done_count, 1);
 
         /* last thread shuts down the light */
         if (curr_done_count == g_tids_len) {
-            sem_post(&wait_for_threads_sem);
+            serverLog(LL_WARNING,"sem_post(&wait_for_threads_sem) status = %d", sem_post(&wait_for_threads_sem));
         }
     }
 
@@ -161,10 +166,13 @@ static void invoke_callback(int sig) {
 
 static void wait_threads(void) {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    serverLog(LL_WARNING,"clock_gettime(CLOCK_REALTIME, &ts) status = %d", clock_gettime(CLOCK_REALTIME, &ts));
+    serverLog(LL_WARNING,"curr time = %ld",ts.tv_sec);
 
     /* calculate relative time until timeout */
     ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
+
+    serverLog(LL_WARNING,"timeout = %ld", ts.tv_sec);
 
     int status = 0;
 
@@ -174,10 +182,22 @@ static void wait_threads(void) {
         serverLog(LL_WARNING, "threads_mngr: waiting for threads' output was interrupted by signal. Continue waiting.");
         continue;
     }
+
+    if (status == -1) {
+        if (errno == ETIMEDOUT) {
+            serverLog(LL_WARNING, "threads_mngr:sem_timedwait() ETIMEDOUT");
+        } else if (errno == EINVAL) {
+            serverLog(LL_WARNING, "threads_mngr: EINVAL");
+        } else if (errno == EDEADLK) {
+            serverLog(LL_WARNING, "threads_mngr: EDEADLK");
+        }
+    }
 }
 
 static void ThreadsManager_cleanups(void) {
     pthread_rwlock_wrlock(&globals_rw_lock);
+    serverLog(LL_WARNING, "threads_mngr:ThreadsManager_cleanups locked for wtire");
+
 
     g_callback = NULL;
     g_tids_len = 0;
@@ -189,6 +209,8 @@ static void ThreadsManager_cleanups(void) {
     /* Lastly, turn off g_in_progress */
     atomicSet(g_in_progress, 0);
     pthread_rwlock_unlock(&globals_rw_lock);
+    serverLog(LL_WARNING, "threads_mngr:ThreadsManager_cleanups unlocked write lock");
+
 
 }
 #else

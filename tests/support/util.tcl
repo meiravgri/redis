@@ -571,7 +571,7 @@ proc wait_load_handlers_disconnected {{level 0}} {
     }
 }
 
-proc K { x y } { set x } 
+proc K { x y } { set x }
 
 # Shuffle a list with Fisher-Yates algorithm.
 proc lshuffle {list} {
@@ -678,11 +678,16 @@ proc latencyrstat_percentiles {cmd r} {
 }
 
 proc generate_fuzzy_traffic_on_key {key duration} {
+    r HRANDFIELD _hash
+}
+
+proc generate_fuzzy_traffic_on_key_org {key duration} {
     # Commands per type, blocking commands removed
     # TODO: extract these from COMMAND DOCS, and improve to include other types
     set string_commands {APPEND BITCOUNT BITFIELD BITOP BITPOS DECR DECRBY GET GETBIT GETRANGE GETSET INCR INCRBY INCRBYFLOAT MGET MSET MSETNX PSETEX SET SETBIT SETEX SETNX SETRANGE LCS STRLEN}
     set hash_commands {HDEL HEXISTS HGET HGETALL HINCRBY HINCRBYFLOAT HKEYS HLEN HMGET HMSET HSCAN HSET HSETNX HSTRLEN HVALS HRANDFIELD}
-    set zset_commands {ZADD ZCARD ZCOUNT ZINCRBY ZINTERSTORE ZLEXCOUNT ZPOPMAX ZPOPMIN ZRANGE ZRANGEBYLEX ZRANGEBYSCORE ZRANK ZREM ZREMRANGEBYLEX ZREMRANGEBYRANK ZREMRANGEBYSCORE ZREVRANGE ZREVRANGEBYLEX ZREVRANGEBYSCORE ZREVRANK ZSCAN ZSCORE ZUNIONSTORE ZRANDMEMBER}
+    set zset_commands {ZADD}
+    # ZCARD ZCOUNT ZINCRBY ZINTERSTORE ZLEXCOUNT ZPOPMAX ZPOPMIN ZRANGE ZRANGEBYLEX ZRANGEBYSCORE ZRANK ZREM ZREMRANGEBYLEX ZREMRANGEBYRANK ZREMRANGEBYSCORE ZREVRANGE ZREVRANGEBYLEX ZREVRANGEBYSCORE ZREVRANK ZSCAN ZSCORE ZUNIONSTORE ZRANDMEMBER
     set list_commands {LINDEX LINSERT LLEN LPOP LPOS LPUSH LPUSHX LRANGE LREM LSET LTRIM RPOP RPOPLPUSH RPUSH RPUSHX}
     set set_commands {SADD SCARD SDIFF SDIFFSTORE SINTER SINTERSTORE SISMEMBER SMEMBERS SMOVE SPOP SRANDMEMBER SREM SSCAN SUNION SUNIONSTORE}
     set stream_commands {XACK XADD XCLAIM XDEL XGROUP XINFO XLEN XPENDING XRANGE XREAD XREADGROUP XREVRANGE XTRIM}
@@ -997,7 +1002,7 @@ proc get_nonloopback_client {} {
 }
 
 # The following functions and variables are used only when running large-memory
-# tests. We avoid defining them when not running large-memory tests because the 
+# tests. We avoid defining them when not running large-memory tests because the
 # global variables takes up lots of memory.
 proc init_large_mem_vars {} {
     if {![info exists ::str500]} {
@@ -1114,4 +1119,3 @@ proc format_command {args} {
     }
     set _ $cmd
 }
-
