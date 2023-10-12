@@ -43,7 +43,8 @@
 #include <sys/syscall.h>
 
 #define IN_PROGRESS 1
-static const clock_t RUN_ON_THREADS_TIMEOUT = 2;
+static const clock_t RUN_ON_THREADS_TIMEOUT = 0;
+//static const clock_t RUN_ON_THREADS_TIMEOUT = 2;
 
 /*================================= Globals ================================= */
 
@@ -148,7 +149,7 @@ static void invoke_callback(int sig) {
     if (g_output_array) {
         size_t thread_id;
         atomicGetIncr(g_thread_ids, thread_id, 1);
-        serverLog(LL_WARNING, "%d: thread_id: %zu", thread_id);
+        serverLog(LL_WARNING, "thread_id: %zu", thread_id);
 
         g_output_array[thread_id] = g_callback();
         size_t curr_done_count;
