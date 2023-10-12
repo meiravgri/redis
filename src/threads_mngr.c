@@ -195,7 +195,25 @@ static void wait_threads(void) {
 }
 
 static void ThreadsManager_cleanups(void) {
-    pthread_rwlock_wrlock(&globals_rw_lock);
+    int status = 0;
+    while (0 != (status = pthread_rwlock_trywrlock(&globals_rw_lock))) {
+        serverLog(LL_WARNING, "threads_mngr: pthread_rwlock_trywrlock failed");
+        switch (status)
+        {
+        case EBUSY:
+            serverLog(LL_WARNING, "threads_mngr: pthread_rwlock_trywrlock EBUSY");
+            break;
+        case EINVAL:
+            serverLog(LL_WARNING, "threads_mngr: pthread_rwlock_trywrlock EINVAL");
+            break;
+        case EDEADLK:
+            serverLog(LL_WARNING, "threads_mngr: pthread_rwlock_trywrlock EDEADLK");
+            break;
+
+        default:
+            break;
+        }
+    }
 
     g_callback = NULL;
     g_tids_len = 0;
