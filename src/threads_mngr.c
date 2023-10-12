@@ -195,7 +195,6 @@ static void wait_threads(void) {
 }
 
 static void ThreadsManager_cleanups(void) {
-    int status = 0;
     pthread_rwlock_wrlock(&globals_rw_lock);
     serverLog(LL_WARNING, "threads_mngr:ThreadsManager_cleanups locked for wtire");
 
