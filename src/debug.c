@@ -1840,7 +1840,11 @@ typedef struct {
 } stacktrace_data;
 
 __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
+    serverLog(LL_WARNING, "start collecting backtrace");
+
     int tid = syscall(SYS_gettid);
+    serverLog(LL_WARNING, "%d: syscall(SYS_gettid) succeeded", tid);
+
     /* allocate stacktrace_data struct */
     stacktrace_data *trace_data = zmalloc(sizeof(stacktrace_data));
     if (!trace_data) {
