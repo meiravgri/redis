@@ -1839,6 +1839,13 @@ typedef struct {
     void *trace[BACKTRACE_MAX_SIZE];
 } stacktrace_data;
 
+static stacktrace_data *stacktraces_mempool = NULL;
+static redisAtomic size_t g_thread_ids = 0;
+static stacktrace_data *get_stack_trace_pool(void) {
+    size_t thread_id;
+    atomicGetIncr(g_thread_ids, thread_id, 1);
+    return stacktraces_mempool + thread_id;
+}
 __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
     serverLog(LL_WARNING, "start collecting backtrace");
 
@@ -1846,12 +1853,12 @@ __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
     serverLog(LL_WARNING, "%d: syscall(SYS_gettid) succeeded", tid);
 
     /* allocate stacktrace_data struct */
-    stacktrace_data *trace_data = ztrymalloc(sizeof(stacktrace_data));
+    stacktrace_data *trace_data = get_stack_trace_pool();
     if (!trace_data) {
         serverLog(LL_WARNING, "%d: from collect_stacktrace_data: zmalloc failed", tid);
 
     }
-    serverLog(LL_WARNING, "%d: from collect_stacktrace_data: start writing bt", tid);
+    serverLog(LL_WARNING, "%d: from collect_stacktrace_data: start writing bt to %p", tid, (void*)trace_data);
     /* Get the stack trace first! */
     trace_data->trace_size = backtrace(trace_data->trace, BACKTRACE_MAX_SIZE);
 
@@ -1866,7 +1873,6 @@ __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
     /* return the trace data */
     return trace_data;
 }
-
 __attribute__ ((noinline))
 static void writeStacktraces(int fd, int uplevel) {
     /* get the list of all the process's threads that don't block or ignore the THREADS_SIGNAL */
@@ -1874,6 +1880,9 @@ static void writeStacktraces(int fd, int uplevel) {
     size_t len_tids = 0;
     pid_t *tids = get_ready_to_signal_threads_tids(pid, THREADS_SIGNAL, &len_tids);
     serverLog(LL_WARNING, "writeStacktraces(): call threads_mngr");
+
+    stacktrace_data datas[len_tids];
+    stacktraces_mempool = datas;
 
 
     /* This call returns either NULL or the stacktraces data from all tids */
@@ -1920,7 +1929,7 @@ static void writeStacktraces(int fd, int uplevel) {
         /* add the stacktrace */
         backtrace_symbols_fd(curr_stacktrace_data->trace+curr_uplevel, curr_stacktrace_data->trace_size-curr_uplevel, fd);
 
-        zfree(curr_stacktrace_data);
+    //    zfree(curr_stacktrace_data);
     }
     zfree(stacktraces_data);
 
