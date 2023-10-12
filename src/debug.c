@@ -1846,7 +1846,7 @@ __attribute__ ((noinline)) static void *collect_stacktrace_data(void) {
     serverLog(LL_WARNING, "%d: syscall(SYS_gettid) succeeded", tid);
 
     /* allocate stacktrace_data struct */
-    stacktrace_data *trace_data = zmalloc(sizeof(stacktrace_data));
+    stacktrace_data *trace_data = ztrymalloc(sizeof(stacktrace_data));
     if (!trace_data) {
         serverLog(LL_WARNING, "%d: from collect_stacktrace_data: zmalloc failed", tid);
 
