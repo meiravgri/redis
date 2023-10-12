@@ -29,6 +29,12 @@ proc check_log_backtrace_for_debug {log_pattern} {
     set pattern "*debugCommand*"
     set res [wait_for_log_messages 0 \"$pattern\" 0 100 100]
     if {$::verbose} { puts $res}
+    set pattern "*tids_len*"
+    set res [wait_for_log_messages 0 \"$pattern\" 0 100 100]
+    if {$::verbose} { puts $res}
+    set pattern "*clock_gettime(CLOCK_REALTIME, &ts) status = 0*"
+    set res [wait_for_log_messages 0 \"$pattern\" 0 100 100]
+    if {$::verbose} { puts $res}
 }
 
 # used when backtrace_supported == 0
@@ -62,7 +68,7 @@ if {$backtrace_supported} {
 if {!$::valgrind} {
     if {$backtrace_supported} {
         set check_cb check_log_backtrace_for_debug
-    } else {  
+    } else {
         set check_cb check_crash_log
     }
 

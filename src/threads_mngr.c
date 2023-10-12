@@ -104,6 +104,8 @@ void **ThreadsManager_runOnThreads(pid_t *tids, size_t tids_len, run_on_thread_c
     and value = 0 as the initial semaphore value. */
     sem_init(&wait_for_threads_sem, 0, 0);
 
+    serverLog(LL_WARNING, "threads_mngr: ThreadsManager_runOnThreads() tids_len = %zu ", tids_len);
+
     /* Send signal to all the threads in tids */
     pid_t pid = getpid();
     for (size_t i = 0; i < tids_len ; ++i) {
@@ -146,6 +148,8 @@ static void invoke_callback(int sig) {
     if (g_output_array) {
         size_t thread_id;
         atomicGetIncr(g_thread_ids, thread_id, 1);
+        serverLog(LL_WARNING, "%d: thread_id: %zu", thread_id);
+
         g_output_array[thread_id] = g_callback();
         size_t curr_done_count;
         atomicIncrGet(g_num_threads_done, curr_done_count, 1);
@@ -165,7 +169,7 @@ static void wait_threads(void) {
     serverLog(LL_WARNING,"curr time = %ld",ts.tv_sec);
 
     /* calculate relative time until timeout */
-    ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
+   // ts.tv_sec += RUN_ON_THREADS_TIMEOUT;
 
     serverLog(LL_WARNING,"timeout = %ld", ts.tv_sec);
 
