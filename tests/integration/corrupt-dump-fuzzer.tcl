@@ -113,7 +113,7 @@ foreach sanitize_dump {no yes} {
             while true {
                 set k [r randomkey]
                 set dump [r dump $k]
-                set dump [corrupt_payload $dump]
+                set dump "\x10\x15\x15\x00\x00\x00\x06\x00\xE0\x01\x00\x01\x01\x01\x82\x5F\x31\x03\x02\x01\x02\x01\xFF\x0B\x00\xFD\xFE\xB7\x89\xFB\xCD\x76\xCD"
                 set printable_dump [string2printable $dump]
                 set restore_failed false
                 set report_and_restart false
@@ -236,4 +236,3 @@ foreach sanitize_dump {no yes} {
 
 
 } ;# tags
-
